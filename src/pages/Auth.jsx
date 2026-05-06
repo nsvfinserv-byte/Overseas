@@ -4,8 +4,7 @@ import { Mail, Lock, User, ArrowRight, Plane, Loader2, AlertCircle, CheckCircle2
 import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
-import { signIn, signUp, resetPassword } from '../services/authService';
-import { supabase } from '../lib/supabase';
+import { signIn, signUp, resetPassword, getProfile } from '../services/authService';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -42,14 +41,22 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        const { data } = await signIn({ email: formData.email, password: formData.password });
-        // Fetch the user's role directly so we can redirect before AuthContext catches up
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
-        navigate(profile?.role === 'admin' ? '/admin' : '/');
+        const data = await signIn({ email: formData.email, password: formData.password });
+
+        // Fetch role with a timeout — if it hangs (e.g. RLS issue), still navigate
+        let destination = '/';
+        try {
+          const profilePromise = getProfile(data.user.id);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 3000)
+          );
+          const profile = await Promise.race([profilePromise, timeoutPromise]);
+          if (profile?.role === 'admin') destination = '/admin';
+        } catch {
+          // Profile fetch failed or timed out — navigate to home as fallback
+        }
+
+        navigate(destination);
       } else {
         await signUp({ name: formData.name, email: formData.email, password: formData.password });
         navigate('/');
