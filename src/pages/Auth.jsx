@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { signIn, signUp, resetPassword } from '../services/authService';
+import { supabase } from '../lib/supabase';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -41,11 +42,18 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        await signIn({ email: formData.email, password: formData.password });
+        const { data } = await signIn({ email: formData.email, password: formData.password });
+        // Fetch the user's role directly so we can redirect before AuthContext catches up
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+        navigate(profile?.role === 'admin' ? '/admin' : '/');
       } else {
         await signUp({ name: formData.name, email: formData.email, password: formData.password });
+        navigate('/');
       }
-      navigate('/');
     } catch (err) {
       setError(err.message || 'Authentication failed. Please try again.');
     } finally {
