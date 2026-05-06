@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nsvoverseas.com/sitemap.xml

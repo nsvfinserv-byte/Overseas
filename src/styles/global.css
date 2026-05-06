@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ns-navy: #0A192F;
+  --color-ns-royal: #1E3A8A;
+  --color-ns-sky: #38BDF8;
+  --color-ns-gold: #d4af37;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
