@@ -6,6 +6,22 @@ import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { signIn, signUp, resetPassword, getProfile } from '../services/authService';
 
+/* ── Auth validation helpers ── */
+const isValidEmail    = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+const isValidPassword = (v) => v.length >= 8;
+const isValidName     = (v) => v.trim().length >= 2 && /^[a-zA-Z\s'.'\-]+$/.test(v.trim());
+
+function validateAuth({ name, email, password }, { isLogin, isResetMode }) {
+  const errs = {};
+  if (!isLogin && !isResetMode && !isValidName(name))
+    errs.name = 'Full name must be at least 2 characters (letters only).';
+  if (!isValidEmail(email))
+    errs.email = 'Enter a valid email address (e.g. you@example.com).';
+  if (!isResetMode && !isValidPassword(password))
+    errs.password = 'Password must be at least 8 characters long.';
+  return errs;
+}
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [isResetMode, setIsResetMode] = useState(false);
@@ -13,16 +29,31 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [resetSent, setResetSent] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (error) setError(null);
+    if (fieldErrors[name]) setFieldErrors((p) => ({ ...p, [name]: undefined }));
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((p) => ({ ...p, [name]: true }));
+    const errs = validateAuth(formData, { isLogin, isResetMode });
+    if (errs[name]) setFieldErrors((p) => ({ ...p, [name]: errs[name] }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Run full validation before submitting
+    const allTouched = { name: true, email: true, password: true };
+    setTouched(allTouched);
+    const errs = validateAuth(formData, { isLogin, isResetMode });
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
     setIsLoading(true);
     setError(null);
 
@@ -74,6 +105,8 @@ export default function Auth() {
     setError(null);
     setResetSent(false);
     setFormData({ name: '', email: '', password: '' });
+    setFieldErrors({});
+    setTouched({});
   };
 
   const enterResetMode = (e) => {
@@ -190,8 +223,10 @@ export default function Auth() {
                         exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
                         transition={{ duration: 0.3 }}
                       >
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
-                        <div className="relative">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          Full Name <span className="text-red-500">*</span>
+                        </label>
+                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <User className="h-5 w-5 text-slate-400" />
                           </div>
@@ -200,18 +235,28 @@ export default function Auth() {
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
-                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-ns-sky)] focus:border-transparent transition-all"
+                            onBlur={handleBlur}
+                            className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-ns-sky)] focus:border-transparent transition-all ${
+                              fieldErrors.name && touched.name ? 'border-red-400 bg-red-50' : 'border-slate-200'
+                            }`}
                             placeholder="John Doe"
-                            required={!isLogin}
+                            autoComplete="name"
                           />
                         </div>
+                        {fieldErrors.name && touched.name && (
+                          <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                            <AlertCircle size={12} /> {fieldErrors.name}
+                          </p>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
 
                   {/* Email */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Email Address <span className="text-red-500">*</span>
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Mail className="h-5 w-5 text-slate-400" />
@@ -221,11 +266,19 @@ export default function Auth() {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-ns-sky)] focus:border-transparent transition-all"
+                        onBlur={handleBlur}
+                        className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-ns-sky)] focus:border-transparent transition-all ${
+                          fieldErrors.email && touched.email ? 'border-red-400 bg-red-50' : 'border-slate-200'
+                        }`}
                         placeholder="you@example.com"
-                        required
+                        autoComplete="email"
                       />
                     </div>
+                    {fieldErrors.email && touched.email && (
+                      <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                        <AlertCircle size={12} /> {fieldErrors.email}
+                      </p>
+                    )}
                   </div>
 
                   {/* Password — hidden in reset mode */}
@@ -259,11 +312,38 @@ export default function Auth() {
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-ns-sky)] focus:border-transparent transition-all"
-                            placeholder="••••••••"
-                            required={!isResetMode}
+                            onBlur={handleBlur}
+                            className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-ns-sky)] focus:border-transparent transition-all ${
+                              fieldErrors.password && touched.password ? 'border-red-400 bg-red-50' : 'border-slate-200'
+                            }`}
+                            placeholder="Min. 8 characters"
+                            autoComplete={isLogin ? 'current-password' : 'new-password'}
                           />
                         </div>
+                        {fieldErrors.password && touched.password && (
+                          <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                            <AlertCircle size={12} /> {fieldErrors.password}
+                          </p>
+                        )}
+                        {!isLogin && !isResetMode && formData.password.length > 0 && (
+                          <div className="mt-2 flex gap-1">
+                            {[...Array(4)].map((_, i) => (
+                              <div
+                                key={i}
+                                className={`h-1 flex-1 rounded-full transition-colors ${
+                                  formData.password.length >= (i + 1) * 3
+                                    ? formData.password.length >= 12 ? 'bg-green-500'
+                                      : formData.password.length >= 9 ? 'bg-yellow-400'
+                                      : 'bg-red-400'
+                                    : 'bg-slate-200'
+                                }`}
+                              />
+                            ))}
+                            <span className="text-xs text-slate-400 ml-1">
+                              {formData.password.length < 8 ? 'Too short' : formData.password.length < 9 ? 'Weak' : formData.password.length < 12 ? 'Good' : 'Strong'}
+                            </span>
+                          </div>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
