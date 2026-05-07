@@ -8,10 +8,10 @@ import PSB from '../images/PSB.jpg';
 import SBI from '../images/SBI.jpg';
 import Tata from '../images/Tata.jpg';
 import union from '../images/union.png';
-import Canara from '../images/canara.png';
-import Baroda from '../images/baroda.png';
-import Axis from '../images/axis.png';
-import ICICI from '../images/icici.png';
+import Canara from '../images/Canara.png';
+import Baroda from '../images/Baroda.png';
+import Axis from '../images/Axis.png';
+import ICICI from '../images/ICICI.png';
 
 const Partners = () => {
   const partnerLogos = [
